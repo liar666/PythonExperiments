@@ -16,7 +16,7 @@ PIXEL_SIZE=4 # multiply all the drawings by this value
 WINDOW_WIDTH=100
 WINDOW_HEIGHT=100
 TRACK_SIZE=WINDOW_WIDTH/4
-MOBILITY=TRACK_SIZE/6
+MOBILITY_RANGE=TRACK_SIZE/6
 TERRAIN_FG_COLOR="black"
 TERRAIN_BG_COLOR="white"
 SPEED=60
@@ -59,42 +59,30 @@ reset_button = tkinter.Button(root_window, text="Start/Reset",
                               command=start_game)
 reset_button.pack()
 
-# Moves player to the left
-## TODO: optimize: make a single function that tests key pressed and acts accordingly
-def move_left(event):
+# Moves player to the left/right according to keypress
+def move_player(event):
     print(event)
     global player_pos
-    player_pos = player_pos-1
+    if event.keysym == "right":
+        player_pos = player_pos+1
+    else:
+        player_pos = player_pos+1
     if check_player_dead(terrain, player_pos):
         timer.stop()
     else:
         canvas.delete(canvas.find_withtag("player"))
         draw_player(player_pos)
 
-# - add event callback for left keypress
-canvas.bind_all("<KeyPress-Left>", move_left)
-
-# Moves player to the right
-## TODO: optimize: make a single function that tests key pressed and acts accordingly
-def move_right(event):
-    print(event)
-    global player_pos
-    player_pos = player_pos+1
-    if check_player_dead(terrain, player_pos):
-        timer.stop()
-    else:
-        canvas.delete(canvas.find_withtag("player"))
-        draw_player(player_pos)
-
-# - add callback for right keypress
-canvas.bind_all("<KeyPress-Right>", move_right)
+# - add callback for left&right keypresses
+canvas.bind_all("<KeyPress-Left>", move_player)
+canvas.bind_all("<KeyPress-Right>", move_player)
 
 # Create a new line for the terrain
 def compute_line(last_center):
-    new_center = last_center+randint(-MOBILITY, MOBILITY) # TODO: optimize
-    if (new_center<1): new_center=1
-    if (new_center>(WINDOW_WIDTH-1)): new_center=WINDOW_WIDTH-1
-    new_track_width = randint(TRACK_SIZE/2, TRACK_SIZE)
+    new_center = last_center+randint(-MOBILITY_RANGE, MOBILITY_RANGE) # TODO: optimize
+    if (new_center<MOBILITY_RANGE): new_center=MOBILITY_RANGE
+    if (new_center>(WINDOW_WIDTH-MOBILITY_RANGE)): new_center=WINDOW_WIDTH-MOBILITY_RANGE
+    new_track_width = randint(TRACK_SIZE-4, TRACK_SIZE)
     return(new_center, new_track_width)
 
 # Initializes the terrain

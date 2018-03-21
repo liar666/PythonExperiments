@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from math import floor
 from random import randint,seed
 from threading import Timer # to debug (sloweR+prints error on callback function call)
 
@@ -16,15 +17,15 @@ except ImportError:
 PIXEL_SIZE=4 # multiply all the drawings by this value
 CANVAS_WIDTH=100
 CANVAS_HEIGHT=100
-TRACK_SIZE=CANVAS_WIDTH/4
-MOBILITY_RANGE=TRACK_SIZE/6
+TRACK_SIZE=floor(CANVAS_WIDTH/4)
+MOBILITY_RANGE=floor(TRACK_SIZE/6)
 TERRAIN_FG_COLOR="black"
 TERRAIN_BG_COLOR="white"
 PLAYER_COLOR="red"
 SCORE_COLOR="green"
-SPEED=1.        # starting with slow speed of 1 sec between new line creation
-SPEED_DEC=8./10. # the amount of speed increase (in fact timeout decrease)
-SCORE_MOD=15     # every X score points, the speed increases
+INITIAL_SPEED=1.  # starting with slow speed of 1 sec between new line creation
+SPEED_DEC=8./10.  # the amount of speed increase (in fact timeout decrease)
+SCORE_MOD=15      # every X score points, the speed increases
 MIN_PLAYER_POS=1
 MAX_PLAYER_POS=CANVAS_WIDTH-1
 
@@ -36,24 +37,27 @@ root_window.configure(background=TERRAIN_BG_COLOR)
 canvas = tkinter.Canvas(root_window, width=CANVAS_WIDTH*PIXEL_SIZE, height=CANVAS_HEIGHT*PIXEL_SIZE)
 canvas.pack()
 
-txt = canvas.create_text(CANVAS_WIDTH*PIXEL_SIZE/2, 4*PIXEL_SIZE, anchor='center', fill=SCORE_COLOR, state="disabled")
-canvas.itemconfig(txt, text="Score: 0\nSpeed: "+str(1./SPEED))
-canvas.itemconfig(txt, tags=("score"))
-canvas.pack()
 
+speed=INITIAL_SPEED
 terrain = None
 last_center = None
 player_pos = None
 timer = None
 dead = False
 
+txt = canvas.create_text(CANVAS_WIDTH*PIXEL_SIZE/2, 4*PIXEL_SIZE, anchor='center', fill=SCORE_COLOR, state="disabled")
+canvas.itemconfig(txt, text="Score: 0\nSpeed: "+str(1./speed))
+canvas.itemconfig(txt, tags=("score"))
+canvas.pack()
+
 # Resets the game parameters (called on click on "Reset" button)
 def start_game():
-    global terrain, last_center, player_pos, dead
+    global terrain, last_center, player_pos, dead, speed
     dead = False
     terrain, last_center = init_terrain()
     player_pos = last_center
     score = 0
+    speed=INITIAL_SPEED
     #sleep(20);
     update_terrain(terrain, last_center, score)
 
@@ -135,7 +139,7 @@ def draw_player(player_pos):
 # Draws the score
 def draw_score(score):
     sc = canvas.find_withtag("score")
-    canvas.itemconfig(sc, text="Score: "+str(score)+"\nSpeed: "+str(1./SPEED))
+    canvas.itemconfig(sc, text="Score: "+str(score)+"\nSpeed: "+str(1./speed))
     canvas.tag_raise("score")
 
 # Draws the whole game set
@@ -150,7 +154,7 @@ def draw_game(terrain, score):
 # - in fact delete most upwards line + create new line at bottom & redraws the whole terrain
 # TODO: optimize using canvas.move on all gfx objects tagged as "terrain"?
 def update_terrain(curr_terrain, lst_center, score):
-    global terrain, last_center, dead, SPEED
+    global terrain, last_center, dead, speed
     if (dead):
         return
     del(curr_terrain[-1])
@@ -162,9 +166,9 @@ def update_terrain(curr_terrain, lst_center, score):
 #        dead = True
 #    else:
     if (score%SCORE_MOD==1):
-       SPEED=SPEED*SPEED_DEC
+       speed=speed*SPEED_DEC
     draw_game(curr_terrain, score);
-    t = Timer(SPEED, update_terrain, kwargs={ 'curr_terrain':curr_terrain, 'lst_center': new_center, 'score': score+1 })
+    t = Timer(speed, update_terrain, kwargs={ 'curr_terrain':curr_terrain, 'lst_center': new_center, 'score': score+1 })
     t.start()
 
 # Check if player is dead?
@@ -173,7 +177,7 @@ def check_player_dead(terrain, player_pos):
     left_wall = curr_center-curr_width/2
     right_wall= curr_center+curr_width/2
     #print("****** "+str(left_wall)+" < "+str(player_pos)+" < "+str(right_wall)+"****** ")
-    #print(str(SPEED))
+    #print(str(speed))
     is_alive=(player_pos>left_wall and player_pos<right_wall) # TODO: use <= / >= ?
     #print(str(is_alive))
     return(not is_alive)

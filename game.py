@@ -46,7 +46,6 @@ last_center = None
 player_pos = None
 timer = None
 dead = False
-# TODO: make game go faster with time!
 
 # Resets the game parameters (called on click on "Reset" button)
 def start_game():
@@ -119,7 +118,6 @@ def init_terrain():
     return(terrain, last_center)
 
 # Draws the terrain on the window canvas
-## Here use PIXEL_SIZE to zoom in
 def draw_terrain(terrain):
     for l in range(0,len(terrain)):
         curr_center, curr_width = terrain[l]

@@ -11,7 +11,7 @@ except ImportError:
     # for Python3
     import tkinter  ## notice lowercase 't' in tkinter here
 
-##seed(42)  ## From debugging/reproducible experiments
+##seed(42)  ## For debugging/reproducible experiments
 
 # Set useful constants
 PIXEL_SIZE=4 # multiply all the drawings by this value

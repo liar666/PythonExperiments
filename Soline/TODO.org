@@ -1,0 +1,8 @@
+#+STARTUP: showall indent
+#+TODO: TODO(t) LATER(l) CANCELLED(c) DELEGATED(d) | DONE(o) + C-c C-c
+
+* DONE Afficher 't' dans l'interface.
+* DONE Afficher le nombre de particules en chaque point dans l'interface.
+* Change inner working to using timeouts instead of loop
+* Add possibility to pause loop
+* Add gravity

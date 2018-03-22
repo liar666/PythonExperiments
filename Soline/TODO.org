@@ -3,6 +3,6 @@
 
 * DONE Afficher 't' dans l'interface.
 * DONE Afficher le nombre de particules en chaque point dans l'interface.
-* Change inner working to using timeouts instead of loop
-* Add possibility to pause loop
-* Add gravity
+* DONE Change inner working to using timeouts instead of loop
+* DONE Add possibility to pause loop
+* TODO Add gravity

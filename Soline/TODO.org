@@ -5,4 +5,14 @@
 * DONE Afficher le nombre de particules en chaque point dans l'interface.
 * DONE Change inner working to using timeouts instead of loop
 * DONE Add possibility to pause loop
-* TODO Add gravity
+* DONE Add gravity
+* DONE Set the seed for repeateable experiments
+* TODO Allow user to show GUI or work in console
+
+
+* NOTES EXO:
+** t n'apparaît pas à droite de n(x,y,t);
+** l'effet de bord change les résultats si grille petite!
+** calculer A: prendre à t=0 et pos=(0,0) => A=N
+** calculer \sigma: prendre à t=grand et pos=(1,0)
+*** sigma dépend du nombre de paricules ?

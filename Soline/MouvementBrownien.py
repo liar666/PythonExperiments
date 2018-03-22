@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+# coding: utf-8
 
-import random   # pour les nombres aléatoires
-import math     # pour les arrondis
-import time     # pour ralentir la simu
+import random     # pour les nombres aleatoires
+import math       # pour les arrondis
+import time       # pour ralentir la simu avec sleep ou avec after
 
 try:
     # for Python2
@@ -13,8 +14,12 @@ except ImportError:
 
 
 ### A few constants
-GRID_WIDTH      = 20;      # Taille de la grille
-GRID_HEIGHT     = 20;      # Taille de la grille
+BUTTON_WIDTH=20;
+BUTTON_HEIGHT=2;
+FONT=('Times', '8', 'bold italic');
+#
+GRID_WIDTH      = 50;      # Taille de la grille
+GRID_HEIGHT     = 50;      # Taille de la grille
 GRID_STEP       = 10;       # Espace entre les points de la grille
 GRID_COLOR      = "grey";   # Couleur des traits de la grille
 GRID_X_MIN      = -math.floor(GRID_WIDTH/2);  # Coordonnees dans referentiel enonce
@@ -26,12 +31,15 @@ CANVAS_WIDTH    = GRID_WIDTH*GRID_STEP;       # Taille resultante du canvas (zon
 CANVAS_HEIGHT   = GRID_HEIGHT*GRID_STEP;      # Taille resultante du canvas (zone dessin)
 CANVAS_BG_COLOR = "white";                    # Couleur de fond du canvas (zone dessin)
 #
-NB_PARTICLES   = 10;           # Nombre de particles a simuler
-PARTICLE_SIZE  = GRID_STEP/2;  # Taille des cercles pour representer chq particule
-PARTICLE_COLOR = "red";        # Couleur des particules
+NB_PARTICLES   = 100;            # Nombre de particles a simuler
+PARTICLE_SIZE  = GRID_STEP*2/3;  # Taille des cercles pour representer chq particule
+PARTICLE_COLOR = "red";          # Couleur des particules
 #
 NB_SIMU_STEPS   = 100;  # Nombre de pas de temps dans la simulation
-SIMU_ANTISPEED  = 1;    # Nombre de secondes entre chaque pas de temps
+SIMU_INVSPEED   = 200;  # Nombre de millisecondes entre chaque pas de temps
+
+## The only shared var
+paused=False;
 
 
 #### Fonction des particules
@@ -45,7 +53,7 @@ def initParticles(N):
     return particles;
 
 # Deplace aleatoirement une unique particule, en respectant la "condition de bordure"
-def moveSingleParticule(oldPos):
+def moveSingleParticle(oldPos):
     aleat = random.randint(0, 3);
     if (aleat==0):
         newPos = { 'x':oldPos['x']+1, 'y': oldPos['y']};
@@ -73,24 +81,65 @@ def moveSingleParticule(oldPos):
 def moveParticles(particles):
     newParticles = [];
     for p in xrange(0, len(particles)):
-        newParticles.append(moveSingleParticule(particles[p]));
+        newParticles.append(moveSingleParticle(particles[p]));
     return(newParticles);
 
+def addGravity(particles):
+    newParticles = [];
+    for p in xrange(0, len(particles)):
+        newParticles.append(moveSingleParticle(particles[p]));
+    return(newParticles);
+
+#### Problem/Model to GUI/View functions
+
+# Convertit la liste des positions des particules en un tableau
+# (proche de la "grille graphique")
+def convertToMatrix(particles):
+    matrix = [[0 for x in range(GRID_WIDTH)] for y in range(GRID_WIDTH)];
+    for p in xrange(0, len(particles)):
+        currentParticle = particles[p];
+        tx = int(currentParticle['x']-GRID_X_MIN);
+        ty = int(currentParticle['y']-GRID_Y_MIN);
+        ##print("----------- Particle position: "+str(tx)+"/"+str(ty));  ## Debug
+        matrix[tx][ty] += 1;
+    ##print(matrix);   # for debugging
+    return matrix;
 
 #### Fonctions graphiques
 
+# Un/Pauses the simulation
+def pause(pauseButton):
+    global paused;  ## required to set global var
+    paused = not paused;
+    if (paused):
+        pauseButton.config(text="Unpause");
+    else:
+        pauseButton.config(text="Pause");
+
 # Creation & Placement des elements graphiques
-def initGUI(racine):
-    global canvas;  ## for debugging purpose
-    canvas = tkinter.Canvas(racine, width=CANVAS_WIDTH, height=CANVAS_HEIGHT);
+def initGUI(rootWindow):
+    ##global canvas;  ## for debugging purpose
+    canvas = tkinter.Canvas(rootWindow, width=CANVAS_WIDTH, height=CANVAS_HEIGHT);
     canvas.config(background=CANVAS_BG_COLOR);
     canvas.pack();
-    bouton_sortir = tkinter.Button(racine, text="Sortir",
-                                   command=racine.destroy);
-    bouton_sortir.pack();
-    bouton_demarrer = tkinter.Button(racine, text="Démarrer",
-                                     command= lambda:startSimu(canvas));
-    bouton_demarrer.pack();
+    label = tkinter.Label(rootWindow, text='t=0');
+    labelfont = ('times', 20, 'bold');
+    label.config(bg='black', fg='yellow');
+    label.config(font=labelfont);
+    label.config(height=BUTTON_HEIGHT, width=BUTTON_WIDTH);
+    label.pack();  # expand=YES, fill=BOTH
+    startButton = tkinter.Button(rootWindow, text="Démarrer",
+                                 command= lambda: startSimulationLoop(canvas,label));
+    startButton.config(height=BUTTON_HEIGHT, width=BUTTON_WIDTH);
+    startButton.pack();
+    pauseButton = tkinter.Button(rootWindow, text="Pause",
+                                 command=lambda: pause(pauseButton));
+    pauseButton.config(height=BUTTON_HEIGHT, width=BUTTON_WIDTH);
+    pauseButton.pack();
+    exitButton = tkinter.Button(rootWindow, text="Sortir",
+                                command=rootWindow.destroy);
+    exitButton.config(height=BUTTON_HEIGHT, width=BUTTON_WIDTH);
+    exitButton.pack();
 
 def drawGrid(canvas):
     for x in xrange(0, CANVAS_WIDTH, GRID_STEP):
@@ -105,56 +154,86 @@ def drawGrid(canvas):
                              -GRID_Y_MIN*GRID_STEP+PARTICLE_SIZE/2,
                              outline="grey", fill="grey");
 
+# def drawParticlesFromPositions(canvas, particles):
+#     for p in xrange(0, len(particles)):
+#         currentParticle = particles[p];
+#         tx = currentParticle['x']-GRID_X_MIN;
+#         ty = currentParticle['y']-GRID_Y_MIN;
+#         txg = tx*GRID_STEP;
+#         tyg = ty*GRID_STEP;
+#         o = canvas.create_oval(txg-PARTICLE_SIZE, tyg-PARTICLE_SIZE,
+#                                txg+PARTICLE_SIZE, tyg+PARTICLE_SIZE,
+#                                outline=PARTICLE_COLOR, fill=PARTICLE_COLOR);
+#         canvas.itemconfig(o, tags=("part"+str(p))); ## Useless
+#         canvas.update_idletasks(); # THIS IS A DIRTY HACK!!!
 
-def drawParticles(canvas, particles):
-    for p in xrange(0, len(particles)):
-        currentParticle = particles[p];
-        tx = currentParticle['x']-GRID_X_MIN;
-        ty = currentParticle['y']-GRID_Y_MIN;
-        c = canvas.create_oval(tx*GRID_STEP-PARTICLE_SIZE, ty*GRID_STEP-PARTICLE_SIZE,
-                               tx*GRID_STEP+PARTICLE_SIZE, ty*GRID_STEP+PARTICLE_SIZE,
-                               outline=PARTICLE_COLOR, fill=PARTICLE_COLOR);
-        canvas.itemconfig(c, tags=("part"+str(p))); ## Useless
+def drawParticlesFromGrid(canvas, matrix):
+     for x in xrange(0, GRID_WIDTH):
+         for y in xrange(0, GRID_HEIGHT):
+             if (matrix[x][y]>0):
+                 xg = x*GRID_STEP;
+                 yg = y*GRID_STEP;
+                 o = canvas.create_oval(xg-PARTICLE_SIZE, yg-PARTICLE_SIZE,
+                                        xg+PARTICLE_SIZE, yg+PARTICLE_SIZE,
+                                        outline=PARTICLE_COLOR, fill=PARTICLE_COLOR);
+                 canvas.itemconfig(o, tags=("part("+str(x)+"/"+str(y)+")")); ## Useless
+                 ##print("----------- Particle position: "+str(xg)+"/"+str(yg));  ## Debug
+                 t = canvas.create_text((xg, yg), text=str(matrix[x][y]), font=FONT);
+                 canvas.itemconfig(t, tags=("partCount("+str(x)+"/"+str(y)+")")); ## Useless
+                 canvas.update_idletasks(); # THIS IS A DIRTY HACK!!!
 
-# Lance la simulation
-## TODO: looping inside the GUI event loop is dirty. Looping should be done with:
-## Problem1: we do no give a change to the GUI elements to update => we need to force them
+def drawTime(label, t):
+    label.configure(text="t="+str(t));
+    label.update_idletasks();  # THIS IS A DIRTY HACK!!!
+
+# Lance la simulation with loop
+## Problem1: we do no give a chance to the GUI elements to update => we need to force them
 ## Problem2: since the event loop is broken, the "Sortir" button does not work.
-## t = Timer(<delay>, <cbfunc>, kwargs={ <args hmap> });
-## t.start();
-def startSimu(canvas):
-    particles = initParticles(NB_PARTICLES);
-    for step in xrange(0, NB_SIMU_STEPS):
-        print("*** DRAWING STEP#"+str(step));
+# def startSimulationLoop(canvas, label):
+#     particles = initParticles(NB_PARTICLES);
+#     for step in xrange(0, NB_SIMU_STEPS):
+#         ## print("*** DRAWING STEP#"+str(step)); ## Debug
+#         # for the fun of seeing things move
+#         canvas.delete("all");  # optimization:
+#         drawGrid(canvas);      # remove only particles
+# ###        drawParticlesFromPositions(canvas, particles);
+#         drawParticlesFromGrid(canvas, convertToMatrix(particles));
+#         drawTime(label, step);
+#         # actions reelles du pas de temps de la simu
+#         ## print("*** MOVING PARTICLES"); ## Debug
+#         particles = moveParticles(particles);
+#         time.sleep(SIMU_INVSPEED);
+
+# Execute un pas de simulation (si on n'est pas en pause) et se
+# rappelle elle-même au bout un certain delai
+def oneSimulationStep(step, canvas, label, particles):
+    global paused;  ## required to get global var
+    if (not paused):
+        ## print("*** DRAWING STEP#"+str(step)); ## Debug
         # for the fun of seeing things move
         canvas.delete("all");  # optimization:
         drawGrid(canvas);      # remove only particles
-        drawParticles(canvas, particles);
-        canvas.update_idletasks(); # THIS IS A DIRTY HACK!!!
-        # actions reelles du pas de temsp de la simu
-        print("*** MOVING PARTICLES");
+        ###    drawParticlesFromPositions(canvas, particles);
+        drawParticlesFromGrid(canvas, convertToMatrix(particles));
+        drawTime(label, step);
+        # actions reelles du pas de temps de la simu
+        ## print("*** MOVING PARTICLES"); ## Debug
         particles = moveParticles(particles);
-        time.sleep(SIMU_ANTISPEED);
+        step=step+1;
+    # Whatever the status of pause, we recall ourselves
+    canvas.after(SIMU_INVSPEED, oneSimulationStep, step, canvas, label, particles);
 
+# Lance la simulation (via un timer)
+def startSimulationLoop(canvas, label):
+    particles = initParticles(NB_PARTICLES);
+    oneSimulationStep(1, canvas, label, particles);
 
 ##### Lancement automatique du programme
 def main():
     # Les elements graphiques
-    racine = tkinter.Tk(); # une fenetre graphique TK
-    initGUI(racine);
+    rootWindow = tkinter.Tk(); # une fenetre graphique TK
+    rootWindow.title("Ma Super Simulation du Mouvement Brownien");
+    initGUI(rootWindow);
+    rootWindow.mainloop();
 
 main();
-
-
-def test():
-    particles = initParticles(NB_PARTICLES);
-    canvas.delete("all");
-    drawGrid(canvas);
-    drawParticles(canvas, particles);
-    time.sleep(3);
-    particles = moveParticles(particles);
-    particles = moveParticles(particles);
-    particles = moveParticles(particles);
-    canvas.delete("all");
-    drawGrid(canvas);
-    drawParticles(canvas, particles);

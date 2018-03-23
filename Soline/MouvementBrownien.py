@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+## TIPS: to compile, use python -m py_compile MouvementBrownien.py 
+
 import random     # pour les nombres aleatoires
 import math       # pour les arrondis
 import time       # pour ralentir la simu avec sleep ou avec after
 import Tkinter as tkinter # for GUI (version for Python2)
 
 random.seed(42);  # For debugging/reproducible experiments
+
+# required to prevent launching of multiple instances
+mainSimuID=0;
 
 ### A few constants
 GUI_ELT_WIDTH=10;
@@ -208,7 +213,7 @@ def drawTime(label, t):
 
 # Execute un pas de simulation (si on n'est pas en pause) et se
 # rappelle elle-même au bout un certain delai
-def oneSimulationStep(step, canvas, label, particles, gravity):
+def oneSimulationStep(simuID, step, canvas, label, particles, gravity):
     global paused;  ## required to get global var
     if (not paused):
         ## print("*** DRAWING STEP#"+str(step)); ## Debug
@@ -229,14 +234,19 @@ def oneSimulationStep(step, canvas, label, particles, gravity):
             particles = applyGravity(particles);
         step=step+1;
     # Whatever the status of pause, we recall ourselves
-    canvas.after(SIMU_INVSPEED, oneSimulationStep, step, canvas, label, particles, gravity);
+    # NOTE: nope, otherwise multiple instances run in parallel !!!
+    ##print("my simuID="+str(simuID)+" / "+"mainSimuID="+str(mainSimuID)); ## debug
+    if (simuID==mainSimuID):
+        canvas.after(SIMU_INVSPEED, oneSimulationStep, simuID, step, canvas, label, particles, gravity);
 
 # Lance la simulation (via un timer)
 def startSimulationLoop(canvas, label, slider):
+    global mainSimuID;
+    mainSimuID = math.floor(150000*random.random());
     particles = initParticles(NB_PARTICLES);
     gravity = slider.get();
     ##print("*** Starting simulation with gravity="+str(gravity));
-    oneSimulationStep(1, canvas, label, particles, gravity);
+    oneSimulationStep(mainSimuID, 1, canvas, label, particles, gravity);
 
 ##### Lancement automatique du programme
 def main():
